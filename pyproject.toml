@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoru-parser"
+version = "0.0.0"
+description = "Сборщик объявлений auto.ru для личного датасета и анализа рынка"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28",
+    "pydantic>=2.9",
+    "duckdb>=1.1",
+    "typer>=0.15",
+    "structlog>=24.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.9",
+    "mypy>=1.14",
+]
+
+[project.scripts]
+autoru = "autoru_parser.ui.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RET", "PTH", "RUF"]
+# RUF001-003 ищут омоглифы (кириллическая «о» вместо латинской «o»). Для проекта,
+# где комментарии и тесты написаны по-русски, это даёт сотни ложных срабатываний.
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# B008 запрещает вызовы в аргументах по умолчанию, но на этом держится весь
+# синтаксис Typer: опции объявляются именно как значения по умолчанию.
+"src/autoru_parser/ui/cli.py" = ["B008"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+mypy_path = "src"
+packages = ["autoru_parser"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.setuptools.package-data]
+autoru_parser = ["py.typed"]
