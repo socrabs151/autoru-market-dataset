@@ -21,6 +21,7 @@ import typer
 from autoru_parser.core.errors import (
     BlockedBySite,
     LimitReached,
+    NoResults,
     ParseError,
     ParserError,
 )
@@ -180,10 +181,17 @@ def crawl(
     db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
     rps: float = typer.Option(0.5, help="запросов в секунду"),
     max_requests: int = typer.Option(100, help="плановый лимит запросов на прогон"),
+    full: bool = typer.Option(False, "--full", help="собрать выборку целиком, а не одну страницу"),
+    max_depth: int = typer.Option(2, help="насколько дробить выборку при сборе целиком"),
     as_json: bool = typer.Option(False, "--json", help="вывести итог в JSON"),
     verbose: bool = typer.Option(False, "-v", help="подробный лог"),
 ) -> None:
-    """Собрать первую страницу выборки и записать в базу."""
+    """Собрать выборку и записать в базу.
+
+    По умолчанию берётся одна страница: это быстро и предсказуемо.
+    С ``--full`` выборка дробится на непересекающиеся части, пока каждая
+    не поместится в страницу, — так достигается полнота без пагинации.
+    """
     _configure_logging(verbose)
     filters = _filters(
         geo,
@@ -202,12 +210,15 @@ def crawl(
         seats,
         origin,
     )
-    config = CrawlConfig(rps=rps, max_requests=max_requests, db_path=db)
+    config = CrawlConfig(rps=rps, max_requests=max_requests, max_depth=max_depth, db_path=db)
 
     async def run() -> Progress:
         with Store(config.db_path) as store:
             async with build_http(config) as http:
                 crawler = Crawler(AutoRuClient(http), store, config)
+                crawler.reset_progress()
+                if full:
+                    return await crawler.crawl_full(filters)
                 return await crawler.crawl(filters)
 
     try:
@@ -215,6 +226,9 @@ def crawl(
     except LimitReached as exc:
         typer.secho(str(exc), fg=typer.colors.YELLOW, err=True)
         raise typer.Exit(code=2) from exc
+    except NoResults as exc:
+        typer.secho(str(exc), fg=typer.colors.YELLOW, err=True)
+        raise typer.Exit(code=5) from exc
     except BlockedBySite as exc:
         _fail(f"Сайт не отдал данные: {exc}", 3)
         return
@@ -227,11 +241,25 @@ def crawl(
 
     if as_json:
         typer.echo(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2))
-    else:
+        return
+
+    coverage = result.coverage
+    typer.echo(
+        f"Страниц: {result.pages_done}, объявлений: {result.offers_seen}, "
+        f"записано в базу: {result.offers_stored}, запросов: {result.requests}"
+    )
+    if coverage.expected:
+        empty = f", пустых частей {coverage.empty_parts}" if coverage.empty_parts else ""
         typer.echo(
-            f"Страниц: {result.pages_done}, объявлений: {result.offers_seen}, "
-            f"записано в базу: {result.offers_stored}, запросов: {result.requests}"
+            f"Полнота: {coverage.covered} из {coverage.expected} "
+            f"({coverage.percent}%), частей {coverage.leaves}{empty}"
         )
+        if not coverage.complete:
+            typer.secho(
+                f"Выборка собрана не полностью: {coverage.reason}",
+                fg=typer.colors.YELLOW,
+                err=True,
+            )
 
 
 @app.command("count")

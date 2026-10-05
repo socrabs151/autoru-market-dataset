@@ -12,7 +12,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from autoru_parser.core.errors import (
@@ -39,8 +38,8 @@ def check_block(html: str) -> None:
         raise BlockedBySite("auto.ru не отдал страницу: отказ или ограничение")
 
 
-def extract_offers(state: dict[str, Any]) -> tuple[list[dict[str, Any]], int, int]:
-    """Достать сырые объявления и пагинацию из разобранного состояния.
+def extract_offers(state: dict[str, Any]) -> tuple[list[dict[str, Any]], int, int, int]:
+    """Достать сырые объявления, пагинацию и размер страницы.
 
     :raises ParseError: состояние собрано, но блока листинга нет или
         в нём нет поля ``offers``. Это сбой разбора, а не пустой результат.
@@ -64,13 +63,50 @@ def extract_offers(state: dict[str, Any]) -> tuple[list[dict[str, Any]], int, in
     pagination = pagination if isinstance(pagination, dict) else {}
     total = _as_int(pagination.get("total_offers_count"))
     total_pages = _as_int(pagination.get("total_page_count"))
+    page_size = _as_int(pagination.get("page_size")) or len(offers)
 
     if not offers and total and total > 0:
         raise EmptyResultError(
             f"сайт показывает {total} объявлений, а в ответе их нет: канал данных перестал работать"
         )
 
-    return [o for o in offers if isinstance(o, dict)], total or len(offers), total_pages or 1
+    return (
+        [o for o in offers if isinstance(o, dict)],
+        total or len(offers),
+        total_pages or 1,
+        page_size,
+    )
+
+
+def extract_price_ranges(state: dict[str, Any]) -> list[tuple[int, int]]:
+    """Границы ценовых диапазонов, которые сайт насчитал сам.
+
+    В ответе приходит список ``(потолок цены, сколько объявлений до него)``.
+    Это позволяет понять глубину выборки, не делая дополнительных запросов:
+    если даже самый узкий потолок даёт больше объявлений, чем помещается в
+    страницу, цену дробить бессмысленно и нужно уходить в другие измерения.
+    """
+    raw = _get(state, "listingPriceRanges", "data")
+    if not isinstance(raw, list):
+        return []
+    result: list[tuple[int, int]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        ceiling = _as_int(item.get("price_to"))
+        count = _as_int(item.get("offers_count"))
+        if ceiling and count is not None:
+            result.append((ceiling, count))
+    return result
+
+
+def _get(state: dict[str, Any], *path: str) -> Any:
+    current: Any = state
+    for key in path:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(key)
+    return current
 
 
 def _as_int(value: Any) -> int:
@@ -80,8 +116,8 @@ def _as_int(value: Any) -> int:
         return 0
 
 
-def parse_listing(html: str) -> tuple[list[dict[str, Any]], int, int]:
-    """Полный разбор страницы листинга: HTML → сырые объявления.
+def parse_listing(html: str) -> tuple[list[dict[str, Any]], int, int, int]:
+    """Полный разбор страницы листинга: HTML → сырые объявления и пагинация.
 
     :raises BlockedBySite: отказ или требование проверки.
     :raises ParseError: страница есть, а состояние собрать не удалось.
@@ -94,16 +130,11 @@ def parse_listing(html: str) -> tuple[list[dict[str, Any]], int, int]:
     return extract_offers(state)
 
 
-def strip_tracking_params(url: str) -> str:
-    """Убрать метки из адреса. Здесь только для ясности: мы их и не строим."""
-    return re.sub(r"[?&](utm_\w+|yclid|from|source)=[^&]*", "", url)
-
-
 __all__ = [
     "BLOCK_MARKERS",
     "CAPTCHA_MARKERS",
     "check_block",
     "extract_offers",
+    "extract_price_ranges",
     "parse_listing",
-    "strip_tracking_params",
 ]

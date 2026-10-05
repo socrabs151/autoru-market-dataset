@@ -20,6 +20,7 @@ from autoru_parser.core.models import Filters
 BASE_URL = "https://auto.ru"
 
 _SLUG_RE = re.compile(r"^[a-z0-9_]+$")
+_GENERATION_RE = re.compile(r"^[0-9]{1,12}$")
 
 BODY_TYPES: frozenset[str] = frozenset(
     {
@@ -78,6 +79,19 @@ def _check_choice(value: str | None, allowed: frozenset[str], field: str) -> str
     return value
 
 
+def _check_super_gen(value: str) -> str:
+    """Проверить идентификатор поколения.
+
+    Поколение кладётся в адрес числовым сегментом. Это единственный числовой
+    фильтр, который сайт принимает в пути: замерено, что
+    ``/moskva/cars/bmw/x5/21307931/used/`` отдаёт 482 объявления, и в сочетании
+    с годом ``.../2021-year/21307931/used/`` — те же 101, что год без поколения.
+    """
+    if not _GENERATION_RE.match(value):
+        raise ParserError(f"super_gen: ожидается числовой идентификатор, получено {value!r}")
+    return value
+
+
 def build_path(filters: Filters) -> str:
     """Собрать путь выборки.
 
@@ -102,6 +116,8 @@ def build_path(filters: Filters) -> str:
         parts.append(_check_slug(filters.model, "model"))
     if filters.year is not None:
         parts.append(f"{filters.year}-year")
+    if filters.super_gen:
+        parts.append(_check_super_gen(filters.super_gen))
     parts.append(section)
     if filters.price_to is not None:
         parts.append(f"do-{filters.price_to}")

@@ -48,6 +48,10 @@ class Filters(BaseModel):
     mark: str | None = None
     model: str | None = None
     year: int | None = Field(default=None, ge=1900, le=2100)
+    super_gen: str | None = Field(
+        default=None,
+        description="идентификатор поколения, например 21307931",
+    )
     price_to: int | None = Field(default=None, gt=0)
     availability: str = "any"
     body: str | None = None
@@ -173,6 +177,33 @@ class Page(BaseModel):
     offers: list[Offer]
     total_offers: int
     total_pages: int
+    page_size: int = 0
+    depth: int = 0
+
+
+class Coverage(BaseModel):
+    """Итог по полноте: сколько нашли и сколько, по мнению сайта, есть.
+
+    ``covered`` считается по **различным** собранным объявлениям, а не по
+    сумме размеров частей. Иначе объявление, попавшее в две перекрывающиеся
+    части, засчитывалось бы дважды и полнота выглядела бы выше настоящей.
+
+    Первая попытка считать именно так дала 76 «объявлений» при 50
+    существующих: части перекрывались. Урок учтён, поэтому метрика теперь
+    простая и проверяемая — сколько разных объявлений действительно легло
+    в базу против того, сколько сайт назвал в корне.
+    """
+
+    expected: int = 0
+    covered: int = 0
+    leaves: int = 0
+    empty_parts: int = 0
+    complete: bool = True
+    reason: str | None = None
+
+    @property
+    def percent(self) -> float:
+        return round(100.0 * self.covered / self.expected, 1) if self.expected else 100.0
 
 
 class Progress(BaseModel):
@@ -182,11 +213,13 @@ class Progress(BaseModel):
     offers_seen: int = 0
     offers_stored: int = 0
     requests: int = 0
+    coverage: Coverage = Field(default_factory=Coverage)
 
 
 __all__ = [
     "DEALER_SELLER_TYPES",
     "DEFAULT_DB",
+    "Coverage",
     "Filters",
     "Offer",
     "OfferRef",

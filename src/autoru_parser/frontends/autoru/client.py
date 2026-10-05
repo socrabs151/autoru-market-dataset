@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import structlog
 
-from autoru_parser.core.errors import BlockedBySite, CaptchaRequired
+from autoru_parser.core.errors import BlockedBySite, CaptchaRequired, NoResults
 from autoru_parser.core.models import Filters, Page
 from autoru_parser.core.normalize import normalize_all
 from autoru_parser.frontends.autoru.listing import check_block, extract_offers
@@ -39,6 +39,8 @@ class AutoRuClient:
     async def fetch(self, url: str) -> Page:
         """Загрузить страницу и вернуть нормализованные объявления.
 
+        :raises NoResults: по адресу нет объявлений (404). Нормальный исход
+            при переборе значений фильтра, а не поломка.
         :raises BlockedBySite: сайт отказал или потребовал проверки.
         :raises ParseError: страница есть, а состояние собрать не удалось.
         :raises EmptyResultError: сайт показывает объявления, а их нет.
@@ -48,19 +50,32 @@ class AutoRuClient:
         html = response.text
         log.info("fetch.response", status=response.status_code, bytes=len(response.content))
 
+        # Пустой ответ — не сбой. При переборе значений фильтра часть адресов
+        # обязательно оказывается пустой, и это штатный исход.
+        #
+        # Признак проверяется по содержимому, а не по коду ответа: сайт
+        # отдаёт пустую выборку и с кодом 200, и с кодом 404, причём в обоих
+        # случаях это одна и та же страница без фрагментов состояния.
+        # Ориентироваться на код было бы ошибкой: один и тот же факт
+        # пришлось бы обрабатывать двумя разными ветками.
+        if not split_chunks(html):
+            if response.status_code == 404:
+                raise NoResults(f"по адресу нет объявлений: {url}")
+            raise NoResults(f"выборка пуста: {url}")
         if response.status_code >= 500:
             raise BlockedBySite(f"auto.ru ответил {response.status_code}")
         check_block(html)
 
         chunks = split_chunks(html)
         state, order = assemble(chunks)
-        raw_offers, total, pages = extract_offers(state)
+        raw_offers, total, pages, page_size = extract_offers(state)
 
         page = Page(
             url=url,
             offers=normalize_all(raw_offers),
             total_offers=total,
             total_pages=pages,
+            page_size=page_size,
         )
         log.info(
             "fetch.page",
