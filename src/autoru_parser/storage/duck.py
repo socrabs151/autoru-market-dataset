@@ -289,6 +289,16 @@ class Store:
     def close(self) -> None:
         self._con.close()
 
+    @property
+    def connection(self) -> duckdb.DuckDBPyConnection:
+        """Подключение для запросов.
+
+        Выгрузка и аналитика работают обычным SQL, поэтому им нужно то же
+        соединение, что и хранилищу, а не второе: две конкурирующие записи
+        в одну базу дают потерю данных.
+        """
+        return self._con
+
     def __enter__(self) -> Store:
         return self
 

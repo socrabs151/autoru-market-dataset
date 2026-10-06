@@ -94,14 +94,42 @@ def _price_history(raw: Any) -> list[PricePoint]:
     return points
 
 
-def compute_payload_hash(offer: Offer) -> str:
-    """Хэш содержимого объявления — основа для записи в историю.
+#: Поля, которые не влияют на запись в истории.
+#:
+#: ``tags`` — служебные метки сайта, а не свойства автомобиля, и они
+#: мигают: при двух прогонах подряд у части объявлений появлялся и пропадал
+#: тег ``type_top_crown``, при неизменных цене, пробеге и датах. Если бы
+#: теги входили в хэш, каждый прогон создавал бы записи в истории без
+#: всякого смысла, и таблица наполнилась бы мусором.
+#:
+#: Время наблюдения исключено по другой причине: оно всегда новое.
+_HASH_IGNORED: frozenset[str] = frozenset({"observed_at", "payload_hash", "tags"})
 
-    В хэш входят только содержательные поля: время наблюдения исключено,
-    иначе повторный прогон считал бы объявление изменившимся.
+
+def compute_payload_hash(offer: Offer) -> str:
+    """Хэш содержания объявления — основа для записи в историю.
+
+    Порядок элементов в списках не учитывается: сайт отдаёт их в
+    произвольном порядке, и при сравнении списков он менялся от прогона к
+    прогону при полностью одинаковом содержании.
+
+    Это найдено на живых данных, а не придумано: второй прогон подряд
+    добавлял записи в историю, хотя содержание объявлений не менялось.
+
+    ВИстория должна отвечать на вопрос «что изменилось в объявлении», а не
+    «что изменилось на странице сайта». Всё, что не является свойством
+    объявления, из хэша исключено.
     """
-    data = offer.model_dump(mode="json", exclude={"observed_at", "payload_hash"})
-    encoded = json.dumps(data, sort_keys=True, ensure_ascii=False)
+    data = offer.model_dump(mode="json", exclude=set(_HASH_IGNORED))
+    normalized: dict[str, Any] = {}
+    for key, value in data.items():
+        if isinstance(value, list):
+            items = [item for item in value if not isinstance(item, (list, dict))]
+            if len(items) == len(value):
+                normalized[key] = sorted(items, key=str)
+                continue
+        normalized[key] = value
+    encoded = json.dumps(normalized, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 

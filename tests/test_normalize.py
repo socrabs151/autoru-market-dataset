@@ -107,6 +107,51 @@ def test_история_цен_разбирается_и_сортируется(
     assert points[0].price != points[-1].price, "в истории должна быть смена цены"
 
 
+def test_хеш_не_меняется_при_перестановке_тегов(listing_offers: list[Any]) -> None:
+    """Сайт отдаёт теги в произвольном порядке: перестановка не изменение."""
+    raw = dict(listing_offers[0])
+    first = normalize_offer(raw)
+    shuffled = dict(raw)
+    shuffled["tags"] = list(reversed(raw.get("tags") or []))
+    second = normalize_offer(shuffled)
+    assert first.payload_hash == second.payload_hash, "порядок тегов не должен влиять на хэш"
+
+
+def test_мигающие_теги_не_создают_изменения(listing_offers: list[Any]) -> None:
+    """Теги — служебные метки сайта, и они появляются и пропадают.
+
+    Найдено на живых данных: между двумя прогонами подряд у части
+    объявлений появлялся и исчезал тег ``type_top_crown`` при неизменных
+    цене и пробеге. Такое не должно попадать в историю.
+    """
+    raw = dict(listing_offers[0])
+    before = normalize_offer(raw)
+    after_raw = dict(raw)
+    after_raw["tags"] = [*list(raw.get("tags") or []), "type_top_crown"]
+    after = normalize_offer(after_raw)
+    assert before.payload_hash == after.payload_hash
+
+
+def test_изменение_характеристики_меняет_хеш(listing_offers: list[Any]) -> None:
+    """Проверка, что исключение тегов не выключило хэш целиком."""
+    raw = dict(listing_offers[0])
+    before = normalize_offer(raw)
+    changed = dict(raw)
+    price_info = dict(raw["price_info"])
+    price_info["price"] = int(price_info["price"]) - 1000
+    changed["price_info"] = price_info
+    assert before.payload_hash != normalize_offer(changed).payload_hash
+
+
+def test_добавление_новой_характеристики_меняет_хеш(listing_offers: list[Any]) -> None:
+    """Контроль к исключению тегов: хэш не должен перестать работать."""
+    raw = dict(listing_offers[0])
+    before = normalize_offer(raw)
+    changed = dict(raw)
+    changed["documents"] = {**raw["documents"], "owners_number": 7}
+    assert before.payload_hash != normalize_offer(changed).payload_hash
+
+
 def test_хеш_не_меняется_от_времени_наблюдения(
     listing_offers: list[dict[str, Any]],
 ) -> None:

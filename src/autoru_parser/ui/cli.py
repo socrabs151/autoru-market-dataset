@@ -39,6 +39,14 @@ from autoru_parser.frontends.autoru.urls import (
     build_url,
 )
 from autoru_parser.services.crawl import CrawlConfig, Crawler, build_http
+from autoru_parser.services.history import (
+    dataset_summary,
+    hash_consistency,
+    price_changes,
+    price_history,
+    yearly_prices,
+)
+from autoru_parser.storage import export as export_mod
 from autoru_parser.storage.duck import Store
 
 app = typer.Typer(
@@ -270,6 +278,158 @@ def count(
     with Store(db) as store:
         typer.echo(f"объявлений: {store.count_offers()}")
         typer.echo(f"записей истории: {store.count_snapshots()}")
+
+
+@app.command("export")
+def export_cmd(
+    db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
+    out: Path = typer.Option(Path("data/offers.csv"), help="куда выгружать"),
+    fmt: str = typer.Option("csv", help="csv | json | parquet"),
+    table: str = typer.Option("offers", help="offers | snapshots"),
+    since: str = typer.Option(None, help="для snapshots: дата ГГГГ-ММ-ДД"),
+    mileage_to: int = typer.Option(None, help="пробег не больше, км"),
+    mileage_from: int = typer.Option(None, help="пробег не меньше, км"),
+    price_from: int = typer.Option(None, help="цена не меньше, руб"),
+    price_to: int = typer.Option(None, help="цена не больше, руб"),
+    year_from: int = typer.Option(None, help="год не меньше"),
+    year_to: int = typer.Option(None, help="год не больше"),
+    seller_type: str = typer.Option(None, help="PRIVATE или DEALER"),
+    mark: str = typer.Option(None, help="марка, например BMW"),
+) -> None:
+    """Выгрузить данные в файл.
+
+    Фильтры ``--mileage-*``, ``--seller-type`` и ``--year-*`` работают по
+    собранным данным, а не на стороне сайта: сайт такие фильтры через адрес
+    не поддерживает, их параметры запрещены правилами сайта.
+    """
+    filters = [
+        f
+        for f in (
+            export_mod.mileage_to(mileage_to) if mileage_to is not None else None,
+            export_mod.mileage_from(mileage_from) if mileage_from is not None else None,
+            export_mod.price_between(price_from, price_to)
+            if price_from is not None and price_to is not None
+            else None,
+            export_mod.year_from(year_from) if year_from is not None else None,
+            export_mod.year_to(year_to) if year_to is not None else None,
+            export_mod.seller_type(seller_type) if seller_type else None,
+            export_mod.mark_is(mark) if mark else None,
+        )
+        if f is not None
+    ]
+    local = export_mod.and_(*filters) if filters else None
+
+    with Store(db) as store:
+        if table == "snapshots":
+            rows = export_mod.export_snapshots(store.connection, out, fmt, since)
+        elif table == "offers":
+            rows = export_mod.export_offers(store.connection, out, fmt, local)
+        else:
+            _fail(f"неизвестная таблица {table!r}: подходит offers или snapshots", 2)
+            return
+
+    typer.echo(f"выгружено строк: {rows} -> {out}")
+
+
+@app.command("summary")
+def summary(
+    db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
+    as_json: bool = typer.Option(False, "--json", help="вывести в JSON"),
+) -> None:
+    """Сводка по накопленному: объёмы, годы, разброс цен."""
+    with Store(db) as store:
+        data = dataset_summary(store.connection)
+        if as_json:
+            typer.echo(json.dumps(data, ensure_ascii=False, indent=2))
+            return
+        if data.get("объявлений", 0) == 0:
+            typer.echo("в базе пока нет объявлений с ценой")
+            return
+        for key, value in data.items():
+            typer.echo(f"{key:>12}: {value}")
+
+
+@app.command("prices")
+def prices(
+    offer_id: str = typer.Argument(..., help="идентификатор объявления"),
+    db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
+) -> None:
+    """История цен одного объявления."""
+    with Store(db) as store:
+        rows = price_history(store.connection, offer_id)
+    if not rows:
+        typer.echo(f"по объявлению {offer_id} истории цен нет")
+        raise typer.Exit(code=1)
+    typer.echo(f"история цен объявления {offer_id}:")
+    previous: int | None = None
+    for when, price in rows:
+        if previous is None:
+            typer.echo(f"  {when[:19]}  {price:>10}")
+        else:
+            delta = price - previous
+            mark = f"{delta:+d}" + (f" ({100.0 * delta / previous:+.1f}%)" if previous else "")
+            typer.echo(f"  {when[:19]}  {price:>10}  {mark}")
+        previous = price
+
+
+@app.command("changes")
+def changes(
+    db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
+    limit: int = typer.Option(30, help="сколько показать"),
+    all_changes: bool = typer.Option(False, "--all", help="показывать и записи без изменения цены"),
+) -> None:
+    """Изменения цен по всем объявлениям."""
+    with Store(db) as store:
+        rows = price_changes(store.connection, limit, only_changed=not all_changes)
+    if not rows:
+        typer.echo("изменений цен пока нет: нужно минимум два прогона по одному объявлению")
+        raise typer.Exit(code=1)
+    typer.echo(f"{'id':>12}  {'машина':<22} {'старая':>10} {'новая':>10}  {'изм.':>8}")
+    for change in rows:
+        car = " ".join(part for part in (change.mark, change.model) if part)
+        typer.echo(
+            f"{change.offer_id:>12}  {car[:22]:<22} {change.old_price:>10} "
+            f"{change.new_price:>10}  {change.percent:>7}%"
+        )
+
+
+@app.command("check-hash")
+def check_hash(
+    db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
+) -> None:
+    """Проверить гипотезу: меняется ли хеш в адресе при смене цены.
+
+    Если у одного идентификатора встретилось несколько разных хешей, значит
+    хеш зависит от содержимого объявления и использовать его как часть
+    ключа нельзя. Пустой ответ означает лишь, что данных пока мало.
+    """
+    with Store(db) as store:
+        suspicious = hash_consistency(store.connection)
+        snapshots = store.count_snapshots()
+    if snapshots < 2:
+        typer.echo("нужно минимум два прогона: история ещё не накопилась")
+        return
+    if not suspicious:
+        typer.echo(f"подозрительных нет: у всех {snapshots} записей один хеш на идентификатор")
+        return
+    typer.secho(f"хеш менялся у {len(suspicious)} объявлений:", fg=typer.colors.YELLOW)
+    for line in suspicious:
+        typer.echo(f"  {line}")
+
+
+@app.command("by-year")
+def by_year(
+    db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
+) -> None:
+    """Сводка цен по годам выпуска."""
+    with Store(db) as store:
+        rows = yearly_prices(store.connection)
+    if not rows:
+        typer.echo("данных с ценой и годом пока нет")
+        return
+    typer.echo(f"{'год':>6} {'машин':>7} {'средняя':>11} {'медиана':>11} {'ср.пробег':>11}")
+    for year, avg, median, count, avg_mileage in rows:
+        typer.echo(f"{year:>6} {count:>7} {int(avg):>11} {median:>11} {avg_mileage:>11}")
 
 
 if __name__ == "__main__":
