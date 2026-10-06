@@ -267,12 +267,16 @@ def crawl(
     try:
         result = asyncio.run(run())
     except CaptchaRequired as exc:
+        # _fail сам завершает программу; следующая строка недостижима и нужна
+        # только затем, чтобы типобъявление команды оставалось однозначным.
         _fail(explain(), 6)
         raise typer.Exit(code=6) from exc
     except LimitReached as exc:
         typer.secho(str(exc), fg=typer.colors.YELLOW, err=True)
         raise typer.Exit(code=2) from exc
     except NoResults as exc:
+        # Пустой ответ по фильтру — штатный исход, а не отказ: код 5
+        # отличает его от некорректного фильтра и отказа сайта.
         typer.secho(str(exc), fg=typer.colors.YELLOW, err=True)
         raise typer.Exit(code=5) from exc
     except BlockedBySite as exc:
@@ -322,7 +326,7 @@ def count(
 def export_cmd(
     db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
     out: Path = typer.Option(Path("data/offers.csv"), help="куда выгружать"),
-    fmt: str = typer.Option("csv", help="csv | json | parquet"),
+    fmt: str = typer.Option("csv", help="csv | json | ndjson | parquet"),
     table: str = typer.Option("offers", help="offers | snapshots"),
     since: str = typer.Option(None, help="для snapshots: дата ГГГГ-ММ-ДД"),
     mileage_to: int = typer.Option(None, help="пробег не больше, км"),
