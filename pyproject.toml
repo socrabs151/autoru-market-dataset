@@ -16,6 +16,11 @@ dependencies = [
     "duckdb>=1.1",
     "typer>=0.15",
     "structlog>=24.4",
+    # DuckDB обращается к pytz при чтении колонок TIMESTAMPTZ. Без него любой
+    # запрос к истории цен и списку объявлений падает с InvalidInputException.
+    # Зависимость не выглядит прямой: её приносили pandas и babel, а на
+    # машине без них всё просто ломалось.
+    "pytz>=2024.1",
 ]
 
 [project.optional-dependencies]

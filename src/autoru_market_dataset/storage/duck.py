@@ -275,6 +275,12 @@ class Store:
         if self._path.parent != Path():
             self._path.parent.mkdir(parents=True, exist_ok=True)
         self._con = duckdb.connect(str(self._path))
+        # Часовой пояс базы фиксируется явно. Иначе DuckDB берёт его из
+        # системы, и колонки TIMESTAMPTZ читались бы в местном времени: одна и
+        # та же запись на двух машинах дала бы разный час, а история цен
+        # предназначена для сравнения по датам. UTC — единственный разумный
+        # выбор: моменты наблюдения по определению в нём и хранятся.
+        self._con.execute("SET TimeZone='UTC'")
         self._init_schema()
 
     def _init_schema(self) -> None:
