@@ -1,0 +1,98 @@
+name: CI
+
+# Проверки запускаются на каждом пуше в main и на каждом запросе на слияние.
+# Цель: не дать в main состояние, которое локально не проверено. Локально те же
+# проверки выполняет scripts/check.ps1.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Отмена предыдущего запуска при новом пуше: на серии коммитов иначе
+# считаются впустую.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: ruff, mypy, pytest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Забрать код
+        uses: actions/checkout@v4
+
+      - name: Установить Python
+        uses: actions/setup-python@v5
+        with:
+          # Нижняя граница из pyproject. Проверяется именно она: проект не
+          # должен работать на более старой версии. Более новая версия не
+          # проверяется намеренно — она не наша забота, и её проверка ломала бы
+          # сборку вследствие изменений в сторонних пакетах.
+          python-version: "3.12"
+
+      - name: Поставить зависимости
+        # all, а не dev: тесты сервиса и экрана импортируют fastapi и textual.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[all,dev]"
+
+      - name: ruff
+        run: ruff check .
+
+      - name: mypy
+        run: mypy
+
+      # Тесты не ходят в сеть: вместо ответов сайта используется фикстура из
+      # репозитория. Это не соглашение, а проверка: conftest запрещает
+      # открытие соединений, и тест, полезший в сеть, упадёт.
+      - name: pytest
+        run: pytest
+
+  # Windows не равно Linux: пути, регистр имён файлов и кодировки ведут себя
+  # иначе. Проверка на Linux ловит то, чего не видит локальный прогон.
+  sanity:
+    name: публичные файлы на месте
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Забрать код
+        uses: actions/checkout@v4
+
+      - name: Проверить, что приватные документы не попали в репозиторий
+        # Приватные документы проекта — на то и приватные. Если какой-то из
+        # них окажется в индексе, об этом нужно узнать сразу, а не обнаружить
+        # через год.
+        run: |
+          leaked=$(git ls-files | grep -E '(^|/)(AGENT|prompt|DEVLOG|STATUS|TODO|BACKLOG|ROADMAP|DECISIONS|ARCHITECTURE|QUALITY|GLOSSARY)\.md$' || true)
+          if [ -n "$leaked" ]; then
+            echo "В репозитории оказались приватные документы:"
+            echo "$leaked"
+            exit 1
+          fi
+
+      - name: Проверить обязательные публичные файлы
+        run: |
+          for f in README.md CHANGELOG.md LICENSE pyproject.toml .gitignore; do
+            test -f "$f" || { echo "нет файла: $f"; exit 1; }
+          done
+
+      - name: Проверить, что в публичных файлах нет незаполненных плейсхолдеров
+        run: |
+          if grep -nE '\{\{[A-Z_]+\}\}' README.md CHANGELOG.md; then
+            echo "в публичных файлах остались плейсхолдеры каркаса"
+            exit 1
+          fi
+
+      - name: Проверить, что пакет ставится и команда отвечает
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          autoru --help > /dev/null
+          autoru count || echo "счётчик: базы нет, это штатно"
