@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from autoru_parser.core.models import Offer
-from autoru_parser.core.normalize import compute_payload_hash, normalize_all, normalize_offer
-from autoru_parser.core.pii import find_forbidden
+from autoru_market_dataset.core.models import Offer
+from autoru_market_dataset.core.normalize import (
+    compute_payload_hash,
+    normalize_all,
+    normalize_offer,
+)
+from autoru_market_dataset.core.pii import find_forbidden
 
 
 def test_первое_объявление_нормализуется(listing_offers: list[dict[str, Any]]) -> None:

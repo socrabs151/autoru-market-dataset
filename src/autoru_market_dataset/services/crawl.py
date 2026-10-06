@@ -20,11 +20,11 @@ import httpx
 import structlog
 from pydantic import BaseModel, Field
 
-from autoru_parser.core.errors import Cancelled, LimitReached, NoResults
-from autoru_parser.core.models import Coverage, Filters, Page, Progress
-from autoru_parser.frontends.autoru.client import DEFAULT_HEADERS, AutoRuClient
-from autoru_parser.frontends.autoru.refine import split, splittable
-from autoru_parser.storage.duck import Store
+from autoru_market_dataset.core.errors import Cancelled, LimitReached, NoResults
+from autoru_market_dataset.core.models import Coverage, Filters, Page, Progress
+from autoru_market_dataset.frontends.autoru.client import DEFAULT_HEADERS, AutoRuClient
+from autoru_market_dataset.frontends.autoru.refine import split, splittable
+from autoru_market_dataset.storage.duck import Store
 
 log = structlog.get_logger(__name__)
 

@@ -5,12 +5,12 @@ from __future__ import annotations
 import httpx
 import structlog
 
-from autoru_parser.core.errors import BlockedBySite, CaptchaRequired, NoResults
-from autoru_parser.core.models import Filters, Page
-from autoru_parser.core.normalize import normalize_all
-from autoru_parser.frontends.autoru.listing import check_block, extract_offers
-from autoru_parser.frontends.autoru.ris import assemble, split_chunks
-from autoru_parser.frontends.autoru.urls import BASE_URL, build_url
+from autoru_market_dataset.core.errors import BlockedBySite, CaptchaRequired, NoResults
+from autoru_market_dataset.core.models import Filters, Page
+from autoru_market_dataset.core.normalize import normalize_all
+from autoru_market_dataset.frontends.autoru.listing import check_block, extract_offers
+from autoru_market_dataset.frontends.autoru.ris import assemble, split_chunks
+from autoru_market_dataset.frontends.autoru.urls import BASE_URL, build_url
 
 log = structlog.get_logger(__name__)
 

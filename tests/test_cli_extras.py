@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
-from autoru_parser.ui import cli
+from autoru_market_dataset.ui import cli
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 OPTIONAL = ("textual", "fastapi", "uvicorn")
@@ -41,7 +41,7 @@ def fake(name, *args, **kwargs):
 builtins.__import__ = fake
 
 from typer.testing import CliRunner
-from autoru_parser.ui.cli import app
+from autoru_market_dataset.ui.cli import app
 
 result = CliRunner().invoke(app, [{command!r}])
 print("EXIT", result.exit_code)
@@ -88,7 +88,7 @@ def test_команда_без_пакета_объясняет(command: str) -> 
     assert code == 7, output
     assert "Traceback" not in output
     assert "EXC" not in output, output
-    assert "autoru-parser[" in output
+    assert "autoru-market-dataset[" in output
     assert "Остальные команды работают" in output
 
 
@@ -143,8 +143,8 @@ def test_ядро_не_импортирует_необязательные_па�
         "services/crawl.py",
         "storage/duck.py",
     ):
-        source = (SRC / "autoru_parser" / relative).read_text(encoding="utf-8")
-        path = f"src/autoru_parser/{relative}"
+        source = (SRC / "autoru_market_dataset" / relative).read_text(encoding="utf-8")
+        path = f"src/autoru_market_dataset/{relative}"
         for line in source.splitlines():
             if line.startswith(("import ", "from ")) and not line.startswith(" "):
                 assert not re.match(

@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from autoru_parser.frontends.autoru.ris import assemble, clear_cache, split_chunks
+from autoru_market_dataset.frontends.autoru.ris import assemble, clear_cache, split_chunks
 
 FIXTURES = Path(__file__).parent / "fixtures" / "autoru"
 LISTING = FIXTURES / "listing_moscow_bmw_x5_used.html"

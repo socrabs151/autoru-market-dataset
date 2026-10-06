@@ -45,8 +45,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-from autoru_parser.core.models import Filters, Offer
-from autoru_parser.frontends.autoru.urls import (
+from autoru_market_dataset.core.models import Filters, Offer
+from autoru_market_dataset.frontends.autoru.urls import (
     DRIVES,
     TRANSMISSIONS,
     build_url,

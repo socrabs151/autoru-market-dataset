@@ -21,7 +21,7 @@ import json
 import re
 from typing import Any
 
-from autoru_parser.core.errors import ParseError
+from autoru_market_dataset.core.errors import ParseError
 
 _CHUNK_RE = re.compile(
     r'<script[^>]*class="RIS"[^>]*data-webpack-chunk-id="(\d+)"[^>]*>(.*?)</script>',

@@ -18,17 +18,17 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Footer, Header, Input, Label, Log, Static
 
-from autoru_parser.core.errors import (
+from autoru_market_dataset.core.errors import (
     BlockedBySite,
     Cancelled,
     CaptchaRequired,
     ParserError,
 )
-from autoru_parser.core.models import DEFAULT_DB, Filters
-from autoru_parser.frontends.autoru.captcha import explain, report
-from autoru_parser.frontends.autoru.client import AutoRuClient
-from autoru_parser.services.crawl import CrawlConfig, Crawler, build_http
-from autoru_parser.storage.duck import Store
+from autoru_market_dataset.core.models import DEFAULT_DB, Filters
+from autoru_market_dataset.frontends.autoru.captcha import explain, report
+from autoru_market_dataset.frontends.autoru.client import AutoRuClient
+from autoru_market_dataset.services.crawl import CrawlConfig, Crawler, build_http
+from autoru_market_dataset.storage.duck import Store
 
 FIELDS = (
     ("geo", "Город или регион", "moskva"),

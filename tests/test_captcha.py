@@ -7,9 +7,9 @@
 
 import structlog
 
-from autoru_parser.core.errors import CaptchaRequired
-from autoru_parser.frontends.autoru import captcha
-from autoru_parser.frontends.autoru.listing import check_block
+from autoru_market_dataset.core.errors import CaptchaRequired
+from autoru_market_dataset.frontends.autoru import captcha
+from autoru_market_dataset.frontends.autoru.listing import check_block
 
 CAPTCHA_HTML = "<div>Подтвердите, что запросы отправляли вы</div>"
 
@@ -52,7 +52,7 @@ def test_проверка_распознаётся_и_останавливает
 
 def test_проверка_не_путается_с_отказом() -> None:
     """Обычный отказ и требование проверки — разные исходы."""
-    from autoru_parser.core.errors import BlockedBySite
+    from autoru_market_dataset.core.errors import BlockedBySite
 
     try:
         check_block("<html>Доступ ограничен</html>")

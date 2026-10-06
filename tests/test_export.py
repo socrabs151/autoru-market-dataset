@@ -13,11 +13,11 @@ from pathlib import Path
 
 import pytest
 
-from autoru_parser.core.errors import ParserError
-from autoru_parser.core.models import Offer, PricePoint
-from autoru_parser.core.normalize import compute_payload_hash
-from autoru_parser.storage import export
-from autoru_parser.storage.duck import Store
+from autoru_market_dataset.core.errors import ParserError
+from autoru_market_dataset.core.models import Offer, PricePoint
+from autoru_market_dataset.core.normalize import compute_payload_hash
+from autoru_market_dataset.storage import export
+from autoru_market_dataset.storage.duck import Store
 
 MOMENT = "2026-10-06T12:00:00+00:00"
 

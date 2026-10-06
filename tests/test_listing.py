@@ -6,13 +6,13 @@ from typing import Any
 
 import pytest
 
-from autoru_parser.core.errors import (
+from autoru_market_dataset.core.errors import (
     BlockedBySite,
     CaptchaRequired,
     EmptyResultError,
     ParseError,
 )
-from autoru_parser.frontends.autoru.listing import (
+from autoru_market_dataset.frontends.autoru.listing import (
     check_block,
     extract_offers,
     extract_price_ranges,

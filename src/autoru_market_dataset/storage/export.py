@@ -18,7 +18,7 @@ from pathlib import Path
 
 import duckdb
 
-from autoru_parser.core.errors import ParserError
+from autoru_market_dataset.core.errors import ParserError
 
 #: Таблицы, которые имеет смысл выгружать.
 TABLE_OFFERS = "offers"

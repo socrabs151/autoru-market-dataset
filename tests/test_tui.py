@@ -14,13 +14,13 @@ from typing import Any
 import pytest
 from textual.widgets import Button, Input, Log, Static
 
-from autoru_parser.core.errors import BlockedBySite, Cancelled, CaptchaRequired
-from autoru_parser.core.models import DEFAULT_DB, Filters, Offer, Page, PricePoint
-from autoru_parser.core.normalize import compute_payload_hash
-from autoru_parser.frontends.autoru.urls import build_url
-from autoru_parser.services.crawl import CrawlConfig
-from autoru_parser.storage.duck import Store
-from autoru_parser.ui.tui import KEYS, ParserApp
+from autoru_market_dataset.core.errors import BlockedBySite, Cancelled, CaptchaRequired
+from autoru_market_dataset.core.models import DEFAULT_DB, Filters, Offer, Page, PricePoint
+from autoru_market_dataset.core.normalize import compute_payload_hash
+from autoru_market_dataset.frontends.autoru.urls import build_url
+from autoru_market_dataset.services.crawl import CrawlConfig
+from autoru_market_dataset.storage.duck import Store
+from autoru_market_dataset.ui.tui import KEYS, ParserApp
 
 
 def sync(fn: Callable[..., Awaitable[None]]) -> Callable[..., None]:
@@ -274,8 +274,8 @@ def test_экран_берёт_путь_к_базе() -> None:
 
 def test_клиент_по_умолчанию_httpx() -> None:
     """Обычный клиент строится на httpx, без браузера."""
-    from autoru_parser.frontends.autoru.client import AutoRuClient
-    from autoru_parser.ui.tui import default_client
+    from autoru_market_dataset.frontends.autoru.client import AutoRuClient
+    from autoru_market_dataset.ui.tui import default_client
 
     client = default_client(CrawlConfig())
     assert isinstance(client, AutoRuClient)
@@ -285,7 +285,7 @@ def test_отмена_снаружи_доходит_до_обхода() -> None:
     """Флаг отмены проверяется обходом, а не только экраном."""
     import asyncio
 
-    from autoru_parser.services.crawl import Crawler
+    from autoru_market_dataset.services.crawl import Crawler
 
     async def scenario() -> None:
         client = FakeClient(hang=True)

@@ -19,7 +19,7 @@ from pathlib import Path
 
 import duckdb
 
-from autoru_parser.core.models import Offer, PricePoint
+from autoru_market_dataset.core.models import Offer, PricePoint
 
 SCHEMA_VERSION = 2
 

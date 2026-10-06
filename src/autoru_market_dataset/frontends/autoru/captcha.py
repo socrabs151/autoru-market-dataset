@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import structlog
 
-from autoru_parser.core.errors import CaptchaRequired
+from autoru_market_dataset.core.errors import CaptchaRequired
 
 log = structlog.get_logger(__name__)
 

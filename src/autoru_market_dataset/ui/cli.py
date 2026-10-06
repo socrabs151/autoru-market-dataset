@@ -18,7 +18,7 @@ from pathlib import Path
 import structlog
 import typer
 
-from autoru_parser.core.errors import (
+from autoru_market_dataset.core.errors import (
     BlockedBySite,
     CaptchaRequired,
     LimitReached,
@@ -26,10 +26,10 @@ from autoru_parser.core.errors import (
     ParseError,
     ParserError,
 )
-from autoru_parser.core.models import DEFAULT_DB, Filters, Progress
-from autoru_parser.frontends.autoru.captcha import explain
-from autoru_parser.frontends.autoru.client import AutoRuClient
-from autoru_parser.frontends.autoru.urls import (
+from autoru_market_dataset.core.models import DEFAULT_DB, Filters, Progress
+from autoru_market_dataset.frontends.autoru.captcha import explain
+from autoru_market_dataset.frontends.autoru.client import AutoRuClient
+from autoru_market_dataset.frontends.autoru.urls import (
     AVAILABILITIES,
     BODY_TYPES,
     CATEGORIES,
@@ -40,16 +40,16 @@ from autoru_parser.frontends.autoru.urls import (
     TRANSMISSIONS,
     build_url,
 )
-from autoru_parser.services.crawl import CrawlConfig, Crawler, build_http
-from autoru_parser.services.history import (
+from autoru_market_dataset.services.crawl import CrawlConfig, Crawler, build_http
+from autoru_market_dataset.services.history import (
     dataset_summary,
     hash_consistency,
     price_changes,
     price_history,
     yearly_prices,
 )
-from autoru_parser.storage import export as export_mod
-from autoru_parser.storage.duck import Store
+from autoru_market_dataset.storage import export as export_mod
+from autoru_market_dataset.storage.duck import Store
 
 app = typer.Typer(
     help="Сбор объявлений auto.ru для личного датасета и анализа рынка.",
@@ -126,10 +126,10 @@ def _fail(message: str, code: int) -> None:
 #: необязательные наборы, поэтому такое возможно и должно объясняться словами,
 #: а не трассировкой стека.
 EXTRAS = {
-    "ui": ("textual", 'pip install "autoru-parser[ui]"', "команды `autoru tui`"),
+    "ui": ("textual", 'pip install "autoru-market-dataset[ui]"', "команды `autoru tui`"),
     "service": (
         "fastapi",
-        'pip install "autoru-parser[service]"',
+        'pip install "autoru-market-dataset[service]"',
         "команды `autoru serve`",
     ),
 }
@@ -490,7 +490,7 @@ def serve(
     try:
         import uvicorn
 
-        from autoru_parser.transport.api import create_app
+        from autoru_market_dataset.transport.api import create_app
     except ImportError as exc:
         _missing_extra("service", exc)
 
@@ -505,7 +505,7 @@ def tui(
 ) -> None:
     """Экран сбора в терминале: фильтры, прогресс, остановка."""
     try:
-        from autoru_parser.ui.tui import run
+        from autoru_market_dataset.ui.tui import run
     except ImportError as exc:
         _missing_extra("ui", exc)
 

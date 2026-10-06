@@ -16,8 +16,8 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-from autoru_parser.core.models import Offer, PricePoint, now_utc
-from autoru_parser.frontends.autoru.urls import mark_model_from_url
+from autoru_market_dataset.core.models import Offer, PricePoint, now_utc
+from autoru_market_dataset.frontends.autoru.urls import mark_model_from_url
 
 
 def _get(node: Any, *path: str, default: Any = None) -> Any:

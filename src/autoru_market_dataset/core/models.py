@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
-from autoru_parser import SOURCE
+from autoru_market_dataset import SOURCE
 
 DEFAULT_DB = "data/autoru.duckdb"
 

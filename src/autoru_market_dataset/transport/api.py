@@ -21,7 +21,7 @@ import structlog
 from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from autoru_parser.core.errors import (
+from autoru_market_dataset.core.errors import (
     BlockedBySite,
     Cancelled,
     CaptchaRequired,
@@ -29,16 +29,16 @@ from autoru_parser.core.errors import (
     NoResults,
     ParserError,
 )
-from autoru_parser.core.models import DEFAULT_DB, Filters, Progress
-from autoru_parser.frontends.autoru.client import AutoRuClient
-from autoru_parser.services.crawl import CrawlConfig, Crawler, build_http
-from autoru_parser.services.history import (
+from autoru_market_dataset.core.models import DEFAULT_DB, Filters, Progress
+from autoru_market_dataset.frontends.autoru.client import AutoRuClient
+from autoru_market_dataset.services.crawl import CrawlConfig, Crawler, build_http
+from autoru_market_dataset.services.history import (
     dataset_summary,
     hash_consistency,
     price_changes,
     price_history,
 )
-from autoru_parser.storage.duck import Store
+from autoru_market_dataset.storage.duck import Store
 
 log = structlog.get_logger(__name__)
 
@@ -223,7 +223,7 @@ def create_app(
     """
     manager = RunManager(db_path or Path(DEFAULT_DB), factory)
     app = FastAPI(
-        title="autoru-parser",
+        title="autoru-market-dataset",
         version="0.4.0",
         description=(
             "Сбор объявлений auto.ru. Сервис ставит задачи, следит за прогрессом "

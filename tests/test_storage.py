@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from autoru_parser.core.models import Offer, PricePoint
-from autoru_parser.core.normalize import compute_payload_hash
-from autoru_parser.storage.duck import Store
+from autoru_market_dataset.core.models import Offer, PricePoint
+from autoru_market_dataset.core.normalize import compute_payload_hash
+from autoru_market_dataset.storage.duck import Store
 
 #: Фиксированный момент, чтобы два одинаковых по содержанию объявления
 #: имели одинаковый хеш. Реальная история цен приходит со сайта и не «плывёт».

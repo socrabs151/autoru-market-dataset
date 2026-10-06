@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from autoru_parser.core.models import Filters, Offer
-from autoru_parser.frontends.autoru.refine import (
+from autoru_market_dataset.core.models import Filters, Offer
+from autoru_market_dataset.frontends.autoru.refine import (
     DIMENSIONS,
     REJECTED,
     split,
     splittable,
 )
-from autoru_parser.frontends.autoru.urls import build_url
+from autoru_market_dataset.frontends.autoru.urls import build_url
 
 
 def offers_with_years(years: list[int]) -> list[Offer]:
@@ -41,7 +41,7 @@ def offers_with_generations(gens: list[str]) -> list[Offer]:
 
 def observed(years: list[int], generations: list[str] | None = None) -> object:
     """Наблюдения для измерений: годы и, если заданы, поколения."""
-    from autoru_parser.frontends.autoru.refine import _Observed
+    from autoru_market_dataset.frontends.autoru.refine import _Observed
 
     return _Observed(
         years=tuple(years),

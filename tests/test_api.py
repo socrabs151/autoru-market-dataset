@@ -10,13 +10,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from autoru_parser.core.errors import BlockedBySite, CaptchaRequired
-from autoru_parser.core.models import Filters, Offer, Page, PricePoint
-from autoru_parser.core.normalize import compute_payload_hash
-from autoru_parser.frontends.autoru.urls import build_url
-from autoru_parser.services.crawl import CrawlConfig, Crawler
-from autoru_parser.storage.duck import Store
-from autoru_parser.transport.api import create_app
+from autoru_market_dataset.core.errors import BlockedBySite, CaptchaRequired
+from autoru_market_dataset.core.models import Filters, Offer, Page, PricePoint
+from autoru_market_dataset.core.normalize import compute_payload_hash
+from autoru_market_dataset.frontends.autoru.urls import build_url
+from autoru_market_dataset.services.crawl import CrawlConfig, Crawler
+from autoru_market_dataset.storage.duck import Store
+from autoru_market_dataset.transport.api import create_app
 
 PAGE_SIZE = 37
 
@@ -58,7 +58,7 @@ class FakeClient:
             raise self._error
         page = self.pages.get(url)
         if page is None:
-            from autoru_parser.core.errors import NoResults
+            from autoru_market_dataset.core.errors import NoResults
 
             raise NoResults(f"нет данных: {url}")
         return page

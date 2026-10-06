@@ -14,14 +14,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from autoru_parser.core.errors import (
+from autoru_market_dataset.core.errors import (
     BlockedBySite,
     CaptchaRequired,
     EmptyResultError,
     ParseError,
 )
-from autoru_parser.frontends.autoru.captcha import report
-from autoru_parser.frontends.autoru.ris import assemble, split_chunks
+from autoru_market_dataset.frontends.autoru.captcha import report
+from autoru_market_dataset.frontends.autoru.ris import assemble, split_chunks
 
 BLOCK_MARKERS = ("Нет доступа", "Доступ ограничен", "Ошибка 403")
 CAPTCHA_MARKERS = ("SmartCaptcha", "showcaptcha", "Подтвердите, что запросы отправляли вы")

@@ -7,16 +7,16 @@ from pathlib import Path
 
 import pytest
 
-from autoru_parser.core.models import Offer
-from autoru_parser.core.normalize import compute_payload_hash
-from autoru_parser.services.history import (
+from autoru_market_dataset.core.models import Offer
+from autoru_market_dataset.core.normalize import compute_payload_hash
+from autoru_market_dataset.services.history import (
     dataset_summary,
     hash_consistency,
     price_changes,
     price_history,
     yearly_prices,
 )
-from autoru_parser.storage.duck import Store
+from autoru_market_dataset.storage.duck import Store
 
 
 def at(day: int) -> datetime:

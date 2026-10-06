@@ -3,11 +3,13 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "autoru-parser"
+name = "autoru-market-dataset"
 version = "0.0.0"
 description = "Сборщик объявлений auto.ru для личного датасета и анализа рынка"
 readme = "README.md"
 requires-python = ">=3.12"
+# Лицензия не выдаётся: все права защищены. Подробности в LICENSE.
+license-files = ["LICENSE"]
 dependencies = [
     "httpx>=0.28",
     "pydantic>=2.9",
@@ -38,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-autoru = "autoru_parser.ui.cli:app"
+autoru = "autoru_market_dataset.ui.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -58,19 +60,19 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 # B008 запрещает вызовы в аргументах по умолчанию, но на этом держится весь
 # синтаксис Typer и FastAPI: зависимости объявляются именно как значения
 # по умолчанию.
-"src/autoru_parser/ui/cli.py" = ["B008"]
-"src/autoru_parser/transport/api.py" = ["B008"]
+"src/autoru_market_dataset/ui/cli.py" = ["B008"]
+"src/autoru_market_dataset/transport/api.py" = ["B008"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 warn_unreachable = true
 mypy_path = "src"
-packages = ["autoru_parser"]
+packages = ["autoru_market_dataset"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
 
 [tool.setuptools.package-data]
-autoru_parser = ["py.typed"]
+autoru_market_dataset = ["py.typed"]

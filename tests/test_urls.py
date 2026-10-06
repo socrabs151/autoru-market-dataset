@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from autoru_parser.core.errors import ParserError
-from autoru_parser.core.models import Filters
-from autoru_parser.frontends.autoru.urls import (
+from autoru_market_dataset.core.errors import ParserError
+from autoru_market_dataset.core.models import Filters
+from autoru_market_dataset.frontends.autoru.urls import (
     build_path,
     mark_model_from_url,
     offer_id_from_url,

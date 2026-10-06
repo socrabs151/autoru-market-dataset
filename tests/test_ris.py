@@ -6,9 +6,9 @@ import json
 
 import pytest
 
-from autoru_parser.core.errors import ParseError
-from autoru_parser.frontends.autoru import ris
-from autoru_parser.frontends.autoru.ris import assemble, clear_cache, split_chunks
+from autoru_market_dataset.core.errors import ParseError
+from autoru_market_dataset.frontends.autoru import ris
+from autoru_market_dataset.frontends.autoru.ris import assemble, clear_cache, split_chunks
 
 
 def test_фрагменты_находятся_в_странице(listing_html: str) -> None:

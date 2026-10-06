@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from autoru_parser.core.models import Filters, Page
+from autoru_market_dataset.core.models import Filters, Page
 
 
 class PageSource(Protocol):

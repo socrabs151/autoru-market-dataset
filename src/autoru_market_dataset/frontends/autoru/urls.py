@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import re
 
-from autoru_parser.core.errors import ParserError
-from autoru_parser.core.models import Filters
+from autoru_market_dataset.core.errors import ParserError
+from autoru_market_dataset.core.models import Filters
 
 BASE_URL = "https://auto.ru"
 
