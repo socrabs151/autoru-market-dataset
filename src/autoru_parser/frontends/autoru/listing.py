@@ -20,6 +20,7 @@ from autoru_parser.core.errors import (
     EmptyResultError,
     ParseError,
 )
+from autoru_parser.frontends.autoru.captcha import report
 from autoru_parser.frontends.autoru.ris import assemble, split_chunks
 
 BLOCK_MARKERS = ("Нет доступа", "Доступ ограничен", "Ошибка 403")
@@ -33,7 +34,9 @@ def check_block(html: str) -> None:
     :raises BlockedBySite: сайт не отдал страницу.
     """
     if any(marker in html for marker in CAPTCHA_MARKERS):
-        raise CaptchaRequired("auto.ru требует подтверждения запроса")
+        error = CaptchaRequired("auto.ru требует подтверждения запроса")
+        report(error)
+        raise error
     if any(marker in html for marker in BLOCK_MARKERS):
         raise BlockedBySite("auto.ru не отдал страницу: отказ или ограничение")
 

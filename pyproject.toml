@@ -14,6 +14,11 @@ dependencies = [
     "duckdb>=1.1",
     "typer>=0.15",
     "structlog>=24.4",
+    # Экран в терминале и HTTP-сервис. Ядро парсера без них работает:
+    # пропадают только команды tui и serve.
+    "textual>=8.2",
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
 ]
 
 [project.optional-dependencies]
@@ -42,8 +47,10 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
 # B008 запрещает вызовы в аргументах по умолчанию, но на этом держится весь
-# синтаксис Typer: опции объявляются именно как значения по умолчанию.
+# синтаксис Typer и FastAPI: зависимости объявляются именно как значения
+# по умолчанию.
 "src/autoru_parser/ui/cli.py" = ["B008"]
+"src/autoru_parser/transport/api.py" = ["B008"]
 
 [tool.mypy]
 python_version = "3.12"

@@ -36,6 +36,10 @@ class AutoRuClient:
     def url_for(self, filters: Filters) -> str:
         return build_url(filters)
 
+    async def aclose(self) -> None:
+        """Закрыть сетевые соединения."""
+        await self._http.aclose()
+
     async def fetch(self, url: str) -> Page:
         """Загрузить страницу и вернуть нормализованные объявления.
 

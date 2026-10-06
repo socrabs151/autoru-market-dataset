@@ -20,12 +20,14 @@ import typer
 
 from autoru_parser.core.errors import (
     BlockedBySite,
+    CaptchaRequired,
     LimitReached,
     NoResults,
     ParseError,
     ParserError,
 )
 from autoru_parser.core.models import DEFAULT_DB, Filters, Progress
+from autoru_parser.frontends.autoru.captcha import explain
 from autoru_parser.frontends.autoru.client import AutoRuClient
 from autoru_parser.frontends.autoru.urls import (
     AVAILABILITIES,
@@ -231,6 +233,9 @@ def crawl(
 
     try:
         result = asyncio.run(run())
+    except CaptchaRequired as exc:
+        _fail(explain(), 6)
+        raise typer.Exit(code=6) from exc
     except LimitReached as exc:
         typer.secho(str(exc), fg=typer.colors.YELLOW, err=True)
         raise typer.Exit(code=2) from exc
@@ -430,6 +435,38 @@ def by_year(
     typer.echo(f"{'год':>6} {'машин':>7} {'средняя':>11} {'медиана':>11} {'ср.пробег':>11}")
     for year, avg, median, count, avg_mileage in rows:
         typer.echo(f"{year:>6} {count:>7} {int(avg):>11} {median:>11} {avg_mileage:>11}")
+
+
+@app.command("serve")
+def serve(
+    host: str = typer.Option("127.0.0.1", help="адрес прослушивания"),
+    port: int = typer.Option(8000, help="порт"),
+    db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
+    reload: bool = typer.Option(False, help="перезагрузка при изменении кода"),
+) -> None:
+    """Запустить HTTP-сервис для внешней системы управления парсерами.
+
+    Слушает только локальный адрес по умолчанию: сервис ставит задачи сбора
+    и отдаёт данные, а открывать его наружу без необходимости незачем.
+    Документация — на ``/docs``.
+    """
+    import uvicorn
+
+    from autoru_parser.transport.api import create_app
+
+    application = create_app(db)
+    typer.secho(f"Сервис на http://{host}:{port}, документация на /docs", fg=typer.colors.GREEN)
+    uvicorn.run(application, host=host, port=port, reload=reload, log_level="info")
+
+
+@app.command("tui")
+def tui(
+    db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
+) -> None:
+    """Экран сбора в терминале: фильтры, прогресс, остановка."""
+    from autoru_parser.ui.tui import run
+
+    run(db)
 
 
 if __name__ == "__main__":

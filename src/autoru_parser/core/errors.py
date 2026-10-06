@@ -55,8 +55,17 @@ class LimitReached(ParserError):
     """Исчерпан плановый лимит запросов."""
 
 
+class Cancelled(ParserError):
+    """Сбор остановлен по требованию человека.
+
+    Отдельная ошибка, а не «пустой результат»: остановка — это решение, и
+    вызывающий код должен знать, что данные собраны не полностью и намеренно.
+    """
+
+
 __all__ = [
     "BlockedBySite",
+    "Cancelled",
     "CaptchaRequired",
     "EmptyResultError",
     "LimitReached",

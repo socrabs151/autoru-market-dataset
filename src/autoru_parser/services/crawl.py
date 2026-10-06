@@ -11,8 +11,8 @@
 
 from __future__ import annotations
 
+import asyncio
 import random
-import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -20,7 +20,7 @@ import httpx
 import structlog
 from pydantic import BaseModel, Field
 
-from autoru_parser.core.errors import LimitReached, NoResults
+from autoru_parser.core.errors import Cancelled, LimitReached, NoResults
 from autoru_parser.core.models import Coverage, Filters, Page, Progress
 from autoru_parser.frontends.autoru.client import DEFAULT_HEADERS, AutoRuClient
 from autoru_parser.frontends.autoru.refine import split, splittable
@@ -56,7 +56,12 @@ class CrawlConfig(BaseModel):
 
 
 class RateLimiter:
-    """Ограничитель темпа. Держит интервал с разбросом."""
+    """Ограничитель темпа. Держит интервал с разбросом.
+
+    Пауза асинхронная. Раньше здесь стоял блокирующий ``time.sleep``, что
+    не годится: в HTTP-сервисе сбор идёт в фоне вместе с обслуживанием
+    запросов, и блокировка event loop останавливала бы оба сразу.
+    """
 
     def __init__(self, rps: float, jitter: float = 0.4) -> None:
         self._interval = 1.0 / rps
@@ -64,14 +69,15 @@ class RateLimiter:
         self._next_allowed = 0.0
         self._random = random.Random()
 
-    def wait(self) -> float:
+    async def wait(self) -> float:
         """Подождать до следующего допустимого запроса. Возвращает паузу."""
-        delay = self._next_allowed - time.monotonic()
+        loop = asyncio.get_running_loop()
+        delay = self._next_allowed - loop.time()
         pause = delay if delay > 0 else 0.0
         if delay > 0:
-            time.sleep(delay)
+            await asyncio.sleep(delay)
         else:
-            self._next_allowed = time.monotonic()
+            self._next_allowed = loop.time()
         spread = self._interval * self._jitter
         self._next_allowed += self._interval + self._random.uniform(-spread, spread)
         return pause
@@ -86,7 +92,17 @@ class Crawler:
         self._config = config
         self._limiter = RateLimiter(config.rps, config.jitter)
         self._seen: set[str] = set()
+        self._cancelled = False
         self.progress = Progress()
+
+    def cancel(self) -> None:
+        """Остановить сбор.
+
+        Флаг, а не отмена задачи: сбор делает сетевые запросы по одному, и
+        между ними нужно успеть заметить просьбу. Немедленное прерывание
+        посреди загрузки страницы оставило бы данные в непредсказуемом виде.
+        """
+        self._cancelled = True
 
     def reset_progress(self) -> None:
         """Сбросить счётчики прогона.
@@ -96,16 +112,33 @@ class Crawler:
         перевыполнение.
         """
         self._seen.clear()
+        self._cancelled = False
         self.progress = Progress()
 
-    def _spend_request(self) -> None:
+    async def aclose(self) -> None:
+        """Освободить сетевые ресурсы.
+
+        Обход не заводит соединений сам — он берёт готовый клиент, — но
+        закрыть его обязан, если он достанется именно этому объекту. Поэтому
+        закрытие есть у клиента, а не здесь: место, где клиент создан, и
+        место, где он закрыт, должны совпадать.
+        """
+        closer = getattr(self._client, "aclose", None)
+        if closer is not None:
+            await closer()
+
+    async def _spend_request(self) -> None:
+        if self._cancelled:
+            raise Cancelled("сбор остановлен")
         if self.progress.requests >= self._config.max_requests:
             raise LimitReached(f"плановый лимит {self._config.max_requests} запросов исчерпан")
-        self._limiter.wait()
+        await self._limiter.wait()
+        if self._cancelled:
+            raise Cancelled("сбор остановлен")
         self.progress.requests += 1
 
     async def _visit(self, filters: Filters, depth: int) -> Page:
-        self._spend_request()
+        await self._spend_request()
         page = await self._client.fetch(self._client.url_for(filters))
         page.depth = depth
         self.progress.pages_done += 1
