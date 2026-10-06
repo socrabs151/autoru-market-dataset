@@ -122,6 +122,39 @@ def _fail(message: str, code: int) -> None:
     raise typer.Exit(code=code)
 
 
+#: Что доставить, если не хватает пакета. Экран и сервис вынесены в
+#: необязательные наборы, поэтому такое возможно и должно объясняться словами,
+#: а не трассировкой стека.
+EXTRAS = {
+    "ui": ("textual", 'pip install "autoru-parser[ui]"', "команды `autoru tui`"),
+    "service": (
+        "fastapi",
+        'pip install "autoru-parser[service]"',
+        "команды `autoru serve`",
+    ),
+}
+
+_MISSING_CODE = 7
+
+
+def _missing_extra(extra: str, exc: ImportError) -> None:
+    """Сказать, чего не хватает и что доставить.
+
+    :param extra: имя набора: ``ui`` или ``service``.
+    :param exc: исходная ошибка импорта.
+    :raises typer.Exit: всегда — команда без пакета не должна падать стеком.
+    """
+    package, install, what = EXTRAS[extra]
+    typer.secho(
+        f"Для {what} нужен пакет {package}, а его нет.\n"
+        f"Установите: {install}\n"
+        "Остальные команды работают и без него.",
+        fg=typer.colors.YELLOW,
+        err=True,
+    )
+    raise typer.Exit(code=_MISSING_CODE) from exc
+
+
 def _configure_logging(verbose: bool) -> None:
     structlog.configure(
         wrapper_class=structlog.make_filtering_bound_logger(10 if verbose else 20),
@@ -450,9 +483,12 @@ def serve(
     и отдаёт данные, а открывать его наружу без необходимости незачем.
     Документация — на ``/docs``.
     """
-    import uvicorn
+    try:
+        import uvicorn
 
-    from autoru_parser.transport.api import create_app
+        from autoru_parser.transport.api import create_app
+    except ImportError as exc:
+        _missing_extra("service", exc)
 
     application = create_app(db)
     typer.secho(f"Сервис на http://{host}:{port}, документация на /docs", fg=typer.colors.GREEN)
@@ -464,7 +500,10 @@ def tui(
     db: Path = typer.Option(Path(DEFAULT_DB), help="файл базы"),
 ) -> None:
     """Экран сбора в терминале: фильтры, прогресс, остановка."""
-    from autoru_parser.ui.tui import run
+    try:
+        from autoru_parser.ui.tui import run
+    except ImportError as exc:
+        _missing_extra("ui", exc)
 
     run(db)
 
